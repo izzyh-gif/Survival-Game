@@ -52,3 +52,95 @@ export const KEY_TURN_SPEED = 1.9;
 /** Radians of rotation per pixel at sensitivity 1.0. */
 export const MOUSE_RADIANS_PER_PIXEL = 0.0022;
 export const DEFAULT_SENSITIVITY = 1;
+
+// ---- Camera (first <-> third person zoom) ---------------------------------
+/** Max camera distance behind the player. 0 = first person. */
+export const MAX_ZOOM_DISTANCE = 8;
+/** Distance a single tap of a zoom key jumps to when leaving first person. */
+export const ZOOM_TAP_DISTANCE = 3;
+export const ZOOM_TAP_STEP = 1.5;
+/** Metres per second while a zoom key is held. */
+export const ZOOM_HOLD_SPEED = 4;
+/** Below this camera distance the player body is hidden (first person). */
+export const FIRST_PERSON_THRESHOLD = 0.5;
+
+// ---- Inventory ------------------------------------------------------------
+/** Number of inventory slots; all of them are shown in the hotbar (keys 1-9, 0). */
+export const INVENTORY_SLOTS = 10;
+
+// ---- Interaction ----------------------------------------------------------
+/** Max centre-to-centre distance to a tree/campfire the player can act on. */
+export const REACH_DISTANCE = 2.8;
+/** Max distance to pick up a dropped item pile with E. */
+export const PICKUP_DISTANCE = 2.5;
+/** Min dot(facing, direction-to-target); ~0.8 is a cone of about +/-37 degrees. */
+export const AIM_MIN_DOT = 0.8;
+/** How far in front of the player Q drops items. */
+export const DROP_DISTANCE = 1.3;
+export const CHOP_COOLDOWN = 0.55;
+export const FEED_COOLDOWN = 0.15;
+
+// ---- Trees & logs ---------------------------------------------------------
+export const TREE_HITS = 5; // clicks needed to fell a tree (bare hands for now)
+export const LOGS_PER_TREE_MIN = 5;
+export const LOGS_PER_TREE_MAX = 10;
+/** Seconds after felling before a tree starts growing back. */
+export const TREE_REGROW_SECONDS = 120;
+/** Seconds a regrowing tree takes to reach full size. */
+export const TREE_GROW_SECONDS = 20;
+/** A tree will not regrow while the player is closer than this (metres). */
+export const TREE_REGROW_CLEARANCE = 2.5;
+
+// ---- Campfire levelling ---------------------------------------------------
+/** Logs needed to complete level 1. */
+export const CAMPFIRE_LEVEL1_LOGS = 50;
+/** Extra logs required for each later level (level N needs 50 + 10*(N-1)). */
+export const CAMPFIRE_LOGS_INCREMENT = 10;
+/** Upper limit on logs needed for any single level. */
+export const CAMPFIRE_MAX_LOGS_PER_LEVEL = 500;
+/** Logs needed to finish `level` and advance to the next (capped). */
+export const logsRequiredForLevel = (level: number): number =>
+  Math.min(CAMPFIRE_MAX_LOGS_PER_LEVEL, CAMPFIRE_LEVEL1_LOGS + (Math.max(1, level) - 1) * CAMPFIRE_LOGS_INCREMENT);
+
+// ---- Campfire fuel & safe zone (SPEC rule 1) ------------------------------
+/** Seconds of burn time one log adds. */
+export const CAMPFIRE_LOG_BURN_SECONDS = 90;
+export const CAMPFIRE_MAX_FUEL_SECONDS = 600;
+export const CAMPFIRE_START_FUEL_SECONDS = 300;
+/** Warn the player when fuel drops below this many seconds. */
+export const CAMPFIRE_LOW_FUEL_SECONDS = 45;
+/** Seconds the fire may be out before the safe zone disappears. */
+export const CAMPFIRE_OUT_GRACE_SECONDS = 10;
+/** Radius (metres) around the fire that is safe while the safe zone is active. */
+export const CAMPFIRE_SAFE_RADIUS = 20;
+
+// ---- Survival stats -------------------------------------------------------
+export const MAX_HEALTH = 100;
+export const MAX_HUNGER = 100;
+/** Hunger lost per second while awake (100 -> 0 in ~17 min, under 2 in-game days). */
+export const HUNGER_DRAIN_PER_SECOND = 0.1;
+/** Drain multiplier while sprinting (SPEC: hunger drops faster when sprinting). */
+export const HUNGER_SPRINT_MULTIPLIER = 3;
+/** At 0 hunger the player can't sprint and moves at this fraction of speed. */
+export const STARVING_SPEED_MULTIPLIER = 0.7;
+
+/** Minimum seconds between eating actions. */
+export const EAT_COOLDOWN = 0.8;
+
+/** Health lost per second once hunger is at 0 (SPEC: empty hunger hurts health). */
+export const STARVATION_DAMAGE_PER_SECOND = 0.5;
+
+// ---- Livestock & combat ---------------------------------------------------
+/** Damage per hit with bare hands (items can override via ItemDef.damage). */
+export const PUNCH_DAMAGE = 1;
+export const ATTACK_COOLDOWN = 0.45;
+/** Reach/aim for attacking animals (a bit more forgiving: they move). */
+export const ANIMAL_REACH = 3.2;
+export const ANIMAL_AIM_MIN_DOT = 0.7;
+/** How many of each animal the forest should hold. Killed ones respawn. */
+export const LIVESTOCK_COUNTS = { cow: 6, sheep: 8, chicken: 10 } as const;
+export const LIVESTOCK_RESPAWN_SECONDS = 90;
+/** Animals only respawn at least this far from the player (metres). */
+export const LIVESTOCK_RESPAWN_MIN_DISTANCE = 35;
+/** Seconds an animal runs away after being hit. */
+export const ANIMAL_FLEE_SECONDS = 4;

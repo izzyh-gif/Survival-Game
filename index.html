@@ -15,7 +15,37 @@
         position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
         background: rgba(0,0,0,0.6); color: #fff; text-align: center; cursor: pointer;
       }
-      #overlay.hidden, #crosshair.hidden { display: none; }
+      #overlay.hidden, #gameover.hidden, #crosshair.hidden, #prompt.hidden, #toast.hidden { display: none; }
+      #hud-info { position: fixed; top: 12px; left: 12px; color: #fff; font-size: 15px; text-shadow: 0 1px 3px #000; pointer-events: none; }
+      #bars { position: fixed; top: 40px; left: 12px; width: 200px; pointer-events: none; }
+      .bar { position: relative; height: 16px; margin-bottom: 6px; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.4); border-radius: 4px; overflow: hidden; }
+      .bar .fill { height: 100%; transition: width 0.15s; }
+      .bar .label { position: absolute; inset: 0; text-align: center; font-size: 11px; line-height: 16px; color: #fff; text-shadow: 0 1px 2px #000; }
+      #health-fill { background: #d63a3a; }
+      #hunger-fill { background: #e0952c; }
+      #hunger-fill.starving { background: #8a5a1a; }
+      #prompt, #toast {
+        position: fixed; left: 50%; transform: translateX(-50%); color: #fff; padding: 6px 14px;
+        background: rgba(0,0,0,0.55); border-radius: 6px; pointer-events: none; font-size: 15px;
+      }
+      #prompt { top: 58%; }
+      #toast { top: 14%; }
+      #hotbar { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: none; }
+      .slot { position: relative; width: 58px; height: 58px; box-sizing: border-box; background: rgba(0,0,0,0.5);
+        border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; color: #fff; font-size: 11px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+      .slot.selected { border-color: #ffd34d; background: rgba(60,50,10,0.65); }
+      .slot .key { position: absolute; top: 2px; left: 4px; opacity: 0.7; }
+      .slot .icon { width: 22px; height: 22px; border-radius: 4px; }
+      .slot .count { position: absolute; bottom: 2px; right: 5px; font-weight: 700; font-size: 13px; }
+      #gameover { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(40,0,0,0.75); color: #fff; text-align: center; }
+      #gameover .box { background: rgba(20,10,10,0.92); padding: 28px 40px; border-radius: 10px; max-width: 420px; }
+      #gameover h1 { margin: 0 0 8px; letter-spacing: 0.3em; color: #e05050; }
+      #gameover p { margin: 6px 0; }
+      #go-best { font-weight: 700; color: #ffd34d; margin-bottom: 18px !important; }
+      #gameover button { font-size: 16px; padding: 8px 20px; margin: 0 6px; cursor: pointer; }
+      #history-list { margin: 0 0 16px; padding-left: 22px; text-align: left; font-size: 13px; max-height: 120px; overflow-y: auto; }
+      #best-streak { color: #ffd34d; min-height: 1.2em; }
       #panel { background: rgba(20,24,20,0.9); padding: 24px 32px; border-radius: 10px; max-width: 420px; cursor: default; }
       #panel h1 { margin: 0 0 4px; letter-spacing: 0.3em; }
       #panel p { margin: 4px 0 12px; opacity: 0.8; }
@@ -29,22 +59,46 @@
   <body>
     <div id="game"></div>
     <div id="crosshair" class="hidden"></div>
+    <div id="hud-info"></div>
+    <div id="bars">
+      <div class="bar"><div class="fill" id="health-fill"></div><span class="label" id="health-label"></span></div>
+      <div class="bar"><div class="fill" id="hunger-fill"></div><span class="label" id="hunger-label"></span></div>
+    </div>
+    <div id="prompt" class="hidden"></div>
+    <div id="toast" class="hidden"></div>
+    <div id="hotbar"></div>
     <div id="overlay">
       <div id="panel">
         <h1>STRANDED</h1>
         <p>Survive 50 nights.</p>
+        <p id="best-streak"></p>
         <table>
           <tr><td>W / ↑, S / ↓</td><td>Move forward / back</td></tr>
           <tr><td>A / ←, D / →</td><td>Turn (or use the mouse)</td></tr>
           <tr><td>Shift</td><td>Sprint</td></tr>
-          <tr><td>Click</td><td>Use / eat / chop / attack</td></tr>
-          <tr><td>Q / E</td><td>Drop / pick up</td></tr>
+          <tr><td>Click (hold)</td><td>Chop tree / add log to fire</td></tr>
+          <tr><td>E</td><td>Pick up</td></tr>
+          <tr><td>Q (Shift+Q)</td><td>Drop one (whole stack)</td></tr>
+          <tr><td>1-9, 0 / wheel</td><td>Select inventory slot</td></tr>
+          <tr><td>Numpad + / −</td><td>Zoom in / out (also = and -)</td></tr>
           <tr><td>Esc</td><td>Pause</td></tr>
         </table>
         <label>Mouse sensitivity
           <input id="sensitivity" type="range" min="0.2" max="3" step="0.1" />
         </label>
+        <p>Game history</p>
+        <ol id="history-list"></ol>
         <button id="resume" type="button">Click to play</button>
+      </div>
+    </div>
+    <div id="gameover" class="hidden">
+      <div class="box">
+        <h1>GAME OVER</h1>
+        <p id="go-cause"></p>
+        <p id="go-streak"></p>
+        <p id="go-best"></p>
+        <button id="go-restart" type="button">Restart</button>
+        <button id="go-save" type="button">Save progress</button>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

@@ -1,3 +1,4 @@
+import { history, type RunRecord } from '../core/History';
 import { settings } from '../core/Settings';
 
 /**
@@ -8,6 +9,8 @@ export class Overlay {
   private readonly root = document.getElementById('overlay') as HTMLElement;
   private readonly crosshair = document.getElementById('crosshair') as HTMLElement;
   private readonly button = document.getElementById('resume') as HTMLButtonElement;
+  private readonly best = document.getElementById('best-streak') as HTMLElement;
+  private readonly historyEl = document.getElementById('history-list') as HTMLElement;
   private readonly slider = document.getElementById('sensitivity') as HTMLInputElement;
 
   constructor(onResume: () => void) {
@@ -21,10 +24,25 @@ export class Overlay {
     });
   }
 
-  show(paused: boolean): void {
-    this.button.textContent = paused ? 'Click to resume' : 'Click to play';
+  /** `label` is the button text, e.g. 'Click to play' / 'Click to resume' / 'New game'. */
+  show(label: string): void {
+    const bestStreak = history.bestStreak;
+    this.button.textContent = label;
+    this.renderHistory(history.all);
+    this.best.textContent = bestStreak > 0 ? `Best streak: ${bestStreak} night${bestStreak === 1 ? '' : 's'}` : '';
     this.root.classList.remove('hidden');
     this.crosshair.classList.add('hidden');
+  }
+
+  /** Lists the most recent runs (newest first). */
+  private renderHistory(runs: readonly RunRecord[]): void {
+    this.historyEl.replaceChildren();
+    runs.slice(0, 8).forEach((r) => {
+      const li = document.createElement('li');
+      const cause = r.cause === 'starvation' ? 'starved' : 'killed';
+      li.textContent = `${r.nights} night${r.nights === 1 ? '' : 's'} (day ${r.day}), ${cause}, ${new Date(r.endedAt).toLocaleDateString()}`;
+      this.historyEl.appendChild(li);
+    });
   }
 
   hide(): void {

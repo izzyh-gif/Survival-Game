@@ -1,16 +1,50 @@
 import * as THREE from 'three';
+import {
+  CAMPFIRE_LOG_BURN_SECONDS,
+  CAMPFIRE_LOW_FUEL_SECONDS,
+  CAMPFIRE_MAX_FUEL_SECONDS,
+  CAMPFIRE_OUT_GRACE_SECONDS,
+  CAMPFIRE_START_FUEL_SECONDS,
+  logsRequiredForLevel,
+} from '../config';
 
 /**
- * Placeholder campfire: stone ring, logs, flame and a flickering light.
+ * Campfire: stone ring, logs, flame and a flickering light.
  *
- * Only visuals + lit/unlit state for now. Planned (see docs/ROADMAP.md): log
- * counts, levelling, the 10-second "out" timer and the safe zone.
+ * Two separate systems are driven by the same logs:
+ *  - Levelling: each log counts toward `logsRequired`; when reached the fire
+ *    levels up and the counter resets. `World.campfireLevel` reads `level`.
+ *  - Fuel: each log adds burn time; fuel drains in real time. At 0 the fire
+ *    goes out; after CAMPFIRE_OUT_GRACE_SECONDS the safe zone is lost until the
+ *    fire is relit by adding any log. (SPEC rule 1.)
+ *
+ * Not implemented yet (see docs/ROADMAP.md): cooking meat, enemies reacting
+ * to the safe zone (use `World.isSafe()`).
  */
 export class Campfire {
   readonly group = new THREE.Group();
   /** Radius of the solid base (used for player collision). */
   readonly collisionRadius = 1.0;
+  /** True while fuel remains. */
   lit = true;
+  /** Seconds of burn time left. */
+  fuel = CAMPFIRE_START_FUEL_SECONDS;
+  /** Seconds the fire has been out (resets when relit). */
+  outSeconds = 0;
+  /** False once the fire has been out longer than the grace period. */
+  safeZoneActive = true;
+  level = 1;
+  /** Logs added toward the current level. */
+  logs = 0;
+  /** Called after the fire levels up, with the new level. */
+  onLevelUp?: (level: number) => void;
+  /** Fuel just ran out (grace period starts). */
+  onExtinguished?: () => void;
+  /** Out for too long: safe zone just disappeared. */
+  onSafeZoneLost?: () => void;
+  /** Fuel dropped below the warning threshold (fires once per refuel). */
+  onLowFuel?: () => void;
+  private lowFuelWarned = false;
 
   private readonly flame: THREE.Mesh;
   private readonly light: THREE.PointLight;
@@ -50,15 +84,66 @@ export class Campfire {
     this.group.add(this.light);
   }
 
+  /** Logs needed to finish the current level. */
+  get logsRequired(): number {
+    return logsRequiredForLevel(this.level);
+  }
+
+  /**
+   * Feed one log: adds burn time (relighting the fire if needed) and counts
+   * toward the level. Returns true if this log caused a level-up.
+   */
+  addLog(): boolean {
+    this.fuel = Math.min(CAMPFIRE_MAX_FUEL_SECONDS, this.fuel + CAMPFIRE_LOG_BURN_SECONDS);
+    this.lit = true;
+    this.outSeconds = 0;
+    this.safeZoneActive = true;
+    if (this.fuel > CAMPFIRE_LOW_FUEL_SECONDS) this.lowFuelWarned = false;
+    this.logs++;
+    if (this.logs < this.logsRequired) return false;
+    this.logs = 0;
+    this.level++;
+    // Bigger flame and light reach with level (capped so it stays readable).
+    const grow = Math.min(this.level, 20);
+    this.group.scale.setScalar(1 + grow * 0.02);
+    this.light.distance = 28 + grow * 2;
+    this.onLevelUp?.(this.level);
+    return true;
+  }
+
   update(dt: number): void {
     this.time += dt;
+    this.burn(dt);
     this.flame.visible = this.lit;
     if (!this.lit) {
       this.light.intensity = 0;
       return;
     }
-    const flicker = 1 + Math.sin(this.time * 17) * 0.06 + Math.sin(this.time * 31.7) * 0.05;
+    // Flame shrinks and dims as fuel runs low.
+    const vigor = 0.4 + 0.6 * Math.min(1, this.fuel / CAMPFIRE_LOW_FUEL_SECONDS);
+    const flicker = (1 + Math.sin(this.time * 17) * 0.06 + Math.sin(this.time * 31.7) * 0.05) * vigor;
     this.flame.scale.set(1, flicker, 1);
     this.light.intensity = 25 * flicker;
+  }
+
+  private burn(dt: number): void {
+    if (this.lit) {
+      this.fuel = Math.max(0, this.fuel - dt);
+      if (this.fuel <= CAMPFIRE_LOW_FUEL_SECONDS && !this.lowFuelWarned && this.fuel > 0) {
+        this.lowFuelWarned = true;
+        this.onLowFuel?.();
+      }
+      if (this.fuel <= 0) {
+        this.lit = false;
+        this.outSeconds = 0;
+        this.onExtinguished?.();
+      }
+    } else if (this.safeZoneActive) {
+      this.outSeconds += dt;
+      if (this.outSeconds >= CAMPFIRE_OUT_GRACE_SECONDS) {
+        this.safeZoneActive = false;
+        this.onSafeZoneLost?.();
+      }
+    }
   }
 }

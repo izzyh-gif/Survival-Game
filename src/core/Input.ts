@@ -5,7 +5,8 @@
  * - isDown(code): held right now
  * - wasPressed(code): went down since the last endFrame() (edge trigger)
  * - consumeMouseDelta(): accumulated mouse movement (only while pointer locked)
- * - consumeClick(): true once per left-click
+ * - consumeClick(): true once per left-click; isMouseDown: left button held
+ * - consumeWheel(): accumulated wheel delta
  */
 export class Input {
   private down = new Set<string>();
@@ -13,6 +14,8 @@ export class Input {
   private mouseDX = 0;
   private mouseDY = 0;
   private clicked = false;
+  private mouseHeld = false;
+  private wheel = 0;
 
   constructor(private readonly target: HTMLElement) {
     window.addEventListener('keydown', this.onKeyDown);
@@ -20,6 +23,20 @@ export class Input {
     window.addEventListener('blur', this.clear);
     window.addEventListener('mousemove', this.onMouseMove);
     target.addEventListener('mousedown', this.onMouseDown);
+    window.addEventListener('mouseup', this.onMouseUp);
+    window.addEventListener('wheel', this.onWheel, { passive: false });
+  }
+
+  /** Left mouse button currently held (only while pointer locked). */
+  get isMouseDown(): boolean {
+    return this.mouseHeld;
+  }
+
+  /** Accumulated wheel movement since last call (positive = scroll down). */
+  consumeWheel(): number {
+    const w = this.wheel;
+    this.wheel = 0;
+    return w;
   }
 
   isDown(code: string): boolean {
@@ -59,6 +76,8 @@ export class Input {
     this.pressed.clear();
     this.mouseDX = this.mouseDY = 0;
     this.clicked = false;
+    this.mouseHeld = false;
+    this.wheel = 0;
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -79,6 +98,18 @@ export class Input {
   };
 
   private onMouseDown = (e: MouseEvent): void => {
-    if (e.button === 0 && document.pointerLockElement === this.target) this.clicked = true;
+    if (e.button === 0 && document.pointerLockElement === this.target) {
+      this.clicked = true;
+      this.mouseHeld = true;
+    }
+  };
+
+  private onMouseUp = (e: MouseEvent): void => {
+    if (e.button === 0) this.mouseHeld = false;
+  };
+
+  private onWheel = (e: WheelEvent): void => {
+    e.preventDefault();
+    if (document.pointerLockElement === this.target) this.wheel += e.deltaY;
   };
 }

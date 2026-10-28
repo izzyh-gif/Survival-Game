@@ -16,6 +16,8 @@ const DAY_SKY = new THREE.Color(0x8fd0ff);
 export class DayNight {
   hour = START_HOUR;
   day = 1;
+  /** Nights fully survived this run (counted at each dawn, 6:00). Drives the streak. */
+  nightsSurvived = 0;
 
   readonly sun = new THREE.DirectionalLight(0xfff2d6, 2.2);
   readonly hemi = new THREE.HemisphereLight(0xbfe3ff, 0x6a8a4a, 0.9);
@@ -43,11 +45,14 @@ export class DayNight {
   }
 
   update(dt: number): void {
+    const prev = this.hour;
     this.hour += (dt / DAY_LENGTH_SECONDS) * 24;
     if (this.hour >= 24) {
       this.hour -= 24;
       this.day++;
     }
+    if (prev < 6 && this.hour >= 6) this.nightsSurvived++;
+    else if (prev > this.hour && this.hour >= 6) this.nightsSurvived++; // skipped past dawn in one step
     this.apply();
   }
 

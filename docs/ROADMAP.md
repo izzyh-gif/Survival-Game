@@ -11,19 +11,24 @@ Order follows SPEC "Priorities": basic functions first (materials, crafting, wea
 - [x] Day/night cycle and day counter
 - [x] First-person controls: W/S/arrows, A/D turn, mouse look, Shift sprint
 - [x] Pause overlay with sensitivity setting (persisted)
+- [x] First/third-person zoom with visible player model
+- [x] Inventory (10 slots), hotbar HUD, Q drop / E pick up, item piles
+- [x] Chop trees (5-10 logs each), trees regrow over time
+- [x] Campfire log feeding and levelling (50 logs for level 1, +10 per level, capped at 500)
+- [x] Campfire fuel burn-down, 10 s out-timer, safe zone flag (`World.isSafe`)
+- [x] Health and hunger bars; sprint drains hunger; starvation drains health and slows; no natural regen; consumables heal/feed
+- [x] Livestock (cow, sheep, chicken): wander, flee, melee, drops, respawn; raw meat/leather/wool/feather items
+- [x] Game-over screen (streak + best streak), Restart / Save progress, persisted run history, full run reset
 
 ## Next (core loop)
 
-1. Inventory data model + hotbar UI; Q drop / E pick up; click to use (Input already captures click)
-2. Chop trees -> logs (use `Forest.removeTree`); tree-chop progress/axe
-3. Hunger + health bars (hunger drains over time, faster while sprinting; health only from damage)
-4. Livestock (cow/sheep/chicken): kill for raw meat, leather, wool, feathers
-5. Campfire: add logs, levels, 10s out-timer, safe zone, cooking meat; hook level into `world.campfireLevel`
-6. Crafting table + recipes (spear -> gun), metal ore mining
-7. Monsters, night attacks every other night, difficulty +1 every 3 days, blood moon boss every 10 days
-8. Win/lose, 50-night goal, highest streak tracking, game history screen
-9. Tutorial (first-run), full home screen
-10. Merchant (every other day), random loot chests, wolf taming
+1. Axe/tools (chopping currently bare-handed) via crafting
+2. Campfire: cooking meat (drop raw meat in the fire; raw meat is currently edible for only 8 hunger). Fuel, levelling and safe zone are done
+3. Crafting table + recipes (spear -> gun), metal ore mining
+4. Monsters, night attacks every other night, difficulty +1 every 3 days, blood moon boss every 10 days
+5. Win condition at night 50 (plane pickup), dedicated game history screen (the home/pause overlay already lists the last 8 runs)
+6. Tutorial (first-run), full home screen
+7. Merchant (every other day), random loot chests, wolf taming
 
 ## Later
 
@@ -31,7 +36,8 @@ Sound/ambience, three bosses, rare drops, desert biome + snake king, shadows, gr
 
 ## Open questions for the product owner
 
-- Campfire "level 50 unlocks desert": how many logs per level, and how fast should levels realistically rise over 50 nights?
-- Camera: first-person assumed; is third-person wanted?
+- Log requirement is capped at 500/level but total logs to reach level 50 are still ~14,000. Is that intended as a long-term goal, or should the curve/desert unlock change?
+- Fuel tuning (90 s per log, 10 min max) and the 20 m safe radius are my guesses.
+- Livestock numbers/HP/drop amounts and the 90 s respawn are my guesses; bare-hand killing a cow takes 6 hits.
 - Art direction: low-poly procedural (current) vs imported models?
 - Monster/entity designs and what makes day feel "eerie" (ideas: silent animals, too-still wind, distant sounds).

@@ -21,8 +21,16 @@ Requires Node 20+ (developed on Node 24).
 | A / Left, D / Right | Turn the view (no strafing, per spec) |
 | Mouse | Look (pointer lock) |
 | Shift | Sprint |
+| Numpad + / Numpad - (or `=` / `-`) | Zoom camera in / out: fully in = first person, out = third person |
+| Click (hold) | Attack the animal / chop the tree in front; with logs selected near the fire, add a log; with food selected, eat |
+| E | Pick up the nearest dropped item |
+| Q / Shift+Q | Drop one item / the whole stack |
+| 1-9, 0 or mouse wheel | Select inventory slot |
 | Esc | Pause (overlay with sensitivity slider) |
-| Click, Q, E | Input is captured, but actions are not wired up yet |
+
+Gameplay so far: chop trees (5 hits) for 5-10 logs each, pick the logs up, and feed the campfire. Logs count toward the fire's level (50 for level 1, +10 per level, capped at 500) and also burn as fuel (90 s per log). If the fire is out for 10 s the safe zone is lost until you add a log. Hunger drains over time (3x while sprinting); at 0 you can't sprint, move slower, and lose health (0.5/s). Health never regenerates; it only comes back from eating or healing items (bandage, medkit, staff). When you die, a game-over screen shows your streak (nights survived) and the best streak; choose Restart or Save progress (returns to the home screen). Felled trees grow back after 2 minutes. Cows, sheep and chickens roam the forest: hit them (bare hands for now) for raw meat plus leather, wool or feathers. They flee when hit and respawn after 90 s. Raw meat restores a little hunger (cooking it for more is next).
+
+Dev console (`npm run dev` only): `__stranded.stats.damage(30)`, `__stranded.inventory.add('log', 50)`, `__stranded.world.campfireLevel = 5`.
 
 Dev tip: open `/?hour=22` to start at 10pm and inspect the night look.
 
@@ -37,4 +45,4 @@ Pushing to `main` runs `.github/workflows/deploy.yml`, which builds and publishe
 
 ## Status
 
-Foundation complete: procedural island, forest, campfire placeholder, day/night cycle, first-person controls with collision, pause overlay. See the roadmap for next steps.
+Done: procedural island, regrowing forest, day/night, first/third-person controls, inventory + hotbar, chopping, item drops, campfire levelling and fuel, health/hunger bars. See the roadmap for next steps.
