@@ -2,6 +2,10 @@
 
 Order follows SPEC "Priorities": basic functions first (materials, crafting, weapons, hunger, health, monsters); sound, bosses, rare loot and desert last.
 
+NOTE TO NEXT PERSON: Graphics need to be improved, the livestock do not look accurate right now and you can't see the logs and material drops look weird. Feel free to change the artstyle to match the vibes of the game more.
+
+ACCESS CURRENT PROGRESS AT: https://izzyh-gif.github.io/Survival-Game/.
+
 ## Done
 
 - [x] Vite + TypeScript + Three.js project, GitHub Pages deploy workflow
@@ -18,17 +22,17 @@ Order follows SPEC "Priorities": basic functions first (materials, crafting, wea
 - [x] Campfire fuel burn-down, 10 s out-timer, safe zone flag (`World.isSafe`)
 - [x] Health and hunger bars; sprint drains hunger; starvation drains health and slows; no natural regen; consumables heal/feed
 - [x] Livestock (cow, sheep, chicken): wander, flee, melee, drops, respawn; raw meat/leather/wool/feather items
-- [x] Tools: wooden axe (starting gear) with held model + swing animation; per-item chop power and damage
 - [x] Cooking: drop raw meat in the lit fire -> cooked meat
 - [x] Game-over screen (streak + best streak), Restart / Save progress, persisted run history, full run reset
 
 ## Next (core loop)
 
-1. Crafting table + recipes (better axes, spear -> gun), metal ore mining; tool durability is not implemented
-2. Monsters, night attacks every other night, difficulty +1 every 3 days, blood moon boss every 10 days
-3. Win condition at night 50 (plane pickup), dedicated game history screen (the home/pause overlay already lists the last 8 runs)
-4. Tutorial (first-run), full home screen
-5. Merchant (every other day), random loot chests, wolf taming
+1. Axe/tools (chopping currently bare-handed) via crafting
+2. Crafting table + recipes (spear -> gun), metal ore mining
+3. Monsters, night attacks every other night, difficulty +1 every 3 days, blood moon boss every 10 days
+4. Win condition at night 50 (plane pickup), dedicated game history screen (the home/pause overlay already lists the last 8 runs)
+5. Tutorial (first-run), full home screen
+6. Merchant (every other day), random loot chests, wolf taming
 
 ## Later
 
