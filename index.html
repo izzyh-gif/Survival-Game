@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>STRANDED</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
+      #game { position: fixed; inset: 0; }
+      #crosshair {
+        position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+        border-radius: 50%; background: rgba(255,255,255,0.8); box-shadow: 0 0 2px #000; pointer-events: none;
+      }
+      #overlay {
+        position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0.6); color: #fff; text-align: center; cursor: pointer;
+      }
+      #overlay.hidden, #crosshair.hidden { display: none; }
+      #panel { background: rgba(20,24,20,0.9); padding: 24px 32px; border-radius: 10px; max-width: 420px; cursor: default; }
+      #panel h1 { margin: 0 0 4px; letter-spacing: 0.3em; }
+      #panel p { margin: 4px 0 12px; opacity: 0.8; }
+      #panel table { margin: 0 auto 16px; text-align: left; border-collapse: collapse; }
+      #panel td { padding: 2px 10px; }
+      #panel td:first-child { font-weight: 600; }
+      #panel label { display: block; margin-bottom: 16px; }
+      #panel button { font-size: 16px; padding: 8px 24px; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="crosshair" class="hidden"></div>
+    <div id="overlay">
+      <div id="panel">
+        <h1>STRANDED</h1>
+        <p>Survive 50 nights.</p>
+        <table>
+          <tr><td>W / ↑, S / ↓</td><td>Move forward / back</td></tr>
+          <tr><td>A / ←, D / →</td><td>Turn (or use the mouse)</td></tr>
+          <tr><td>Shift</td><td>Sprint</td></tr>
+          <tr><td>Click</td><td>Use / eat / chop / attack</td></tr>
+          <tr><td>Q / E</td><td>Drop / pick up</td></tr>
+          <tr><td>Esc</td><td>Pause</td></tr>
+        </table>
+        <label>Mouse sensitivity
+          <input id="sensitivity" type="range" min="0.2" max="3" step="0.1" />
+        </label>
+        <button id="resume" type="button">Click to play</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
