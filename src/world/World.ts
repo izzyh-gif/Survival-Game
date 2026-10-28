@@ -11,6 +11,9 @@ import {
   WATER_LEVEL,
 } from '../config';
 import { Livestock } from '../entities/Livestock';
+import { toon } from '../render/materials';
+import { textures } from '../render/textures';
+import { Sky } from './Sky';
 import { Campfire } from './Campfire';
 import { ColliderGrid } from './Colliders';
 import { DayNight } from './DayNight';
@@ -33,6 +36,7 @@ export class World {
   readonly dayNight: DayNight;
   readonly drops: DroppedItems;
   readonly livestock: Livestock;
+  private readonly sky: Sky;
 
   constructor() {
     this.dayNight = new DayNight(this.scene);
@@ -41,7 +45,7 @@ export class World {
 
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(TERRAIN_SIZE * 4, TERRAIN_SIZE * 4).rotateX(-Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color: 0x2f9fd8, transparent: true, opacity: 0.8, roughness: 0.25 }),
+      toon(0xffffff, { map: this.waterTexture(), transparent: true, opacity: 0.9 }),
     );
     water.position.y = WATER_LEVEL;
     water.name = 'water';
@@ -64,8 +68,18 @@ export class World {
       this.drops.spawn('cooked_meat', count, p.x + Math.cos(a) * 1.7, p.z + Math.sin(a) * 1.7);
     };
 
+    this.sky = new Sky();
+    this.scene.add(this.sky.group);
+
     this.livestock = new Livestock(this);
     this.scene.add(this.livestock.group);
+  }
+
+  /** Pixel water texture, tiled every 8 m across the ocean plane. */
+  private waterTexture() {
+    const t = textures.water();
+    t.repeat.set((TERRAIN_SIZE * 4) / 8, (TERRAIN_SIZE * 4) / 8);
+    return t;
   }
 
   /** Campfire level. Higher levels unlock more of the map. */
@@ -112,6 +126,8 @@ export class World {
   update(dt: number, focus: THREE.Vector3): void {
     this.dayNight.update(dt);
     this.dayNight.follow(focus);
+    this.sky.update(dt, focus, this.dayNight);
+    textures.water().offset.x = (textures.water().offset.x + dt * 0.004) % 1; // slow drifting waves
     this.campfire.update(dt);
     this.forest.update(dt, focus.x, focus.z);
     this.livestock.update(dt, focus.x, focus.z);

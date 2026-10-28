@@ -10,6 +10,8 @@ import {
   logsRequiredForLevel,
 } from '../config';
 import { ITEMS } from '../inventory/Item';
+import { faceted, toon } from '../render/materials';
+import { createLog } from '../render/props';
 
 /**
  * Campfire: stone ring, logs, flame and a flickering light.
@@ -65,29 +67,32 @@ export class Campfire {
     this.group.position.set(x, y, z);
     this.group.name = 'campfire';
 
-    const stone = new THREE.MeshStandardMaterial({ color: 0x8a8a8a, roughness: 1, flatShading: true });
+    const stone = toon(0x9aa0a6);
+    const stoneDark = toon(0x6e747a);
+    const rockGeo = faceted(new THREE.DodecahedronGeometry(0.3, 0));
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.28, 0), stone);
-      rock.position.set(Math.cos(a) * 0.8, 0.15, Math.sin(a) * 0.8);
+      const rock = new THREE.Mesh(rockGeo, i % 2 ? stone : stoneDark);
+      rock.position.set(Math.cos(a) * 0.85, 0.16, Math.sin(a) * 0.85);
       rock.rotation.set(a, a * 2, 0);
+      rock.scale.set(1, 0.8, 1);
       this.group.add(rock);
     }
 
-    const wood = new THREE.MeshStandardMaterial({ color: 0x5a3a1e, roughness: 1, flatShading: true });
+    // Four cut logs leaning around the fire, with visible ring-pattern ends.
     for (let i = 0; i < 4; i++) {
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.1, 6), wood);
-      log.rotation.z = Math.PI / 2;
-      log.rotation.y = (i / 4) * Math.PI;
-      log.position.y = 0.15 + (i % 2) * 0.12;
+      const log = createLog();
+      log.rotation.y = (i / 4) * Math.PI + 0.4;
+      log.position.y = 0.17 + (i % 2) * 0.17;
       this.group.add(log);
     }
 
-    this.flame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.35, 1.0, 7),
-      new THREE.MeshBasicMaterial({ color: 0xff9a2e }),
-    );
-    this.flame.position.y = 0.7;
+    // Two nested flame cones: red-orange outside, yellow core. Unlit so they glow.
+    this.flame = new THREE.Mesh(faceted(new THREE.ConeGeometry(0.42, 1.1, 6)), new THREE.MeshBasicMaterial({ color: 0xff7a1a }));
+    this.flame.position.y = 0.75;
+    const core = new THREE.Mesh(faceted(new THREE.ConeGeometry(0.24, 0.8, 6)), new THREE.MeshBasicMaterial({ color: 0xffd23f }));
+    core.position.y = -0.1;
+    this.flame.add(core);
     this.group.add(this.flame);
 
     this.group.add(this.cookGroup);

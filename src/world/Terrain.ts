@@ -10,6 +10,8 @@ import {
   WATER_LEVEL,
   WORLD_SEED,
 } from '../config';
+import { faceted, toon } from '../render/materials';
+import { textures } from '../render/textures';
 import { ValueNoise2D, lerp, smoothstep } from './noise';
 
 export type Biome = 'forest' | 'desert';
@@ -67,21 +69,29 @@ export class Terrain {
       colors[i * 3 + 2] = c.b;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geo.computeVertexNormals();
-    const mesh = new THREE.Mesh(
-      geo,
-      new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1, metalness: 0 }),
-    );
+    // Low-poly look: split vertices so every triangle is one flat colour + flat normal.
+    const flat = faceted(geo);
+    const fc = flat.attributes.color as THREE.BufferAttribute;
+    for (let i = 0; i < fc.count; i += 3) {
+      const r = (fc.getX(i) + fc.getX(i + 1) + fc.getX(i + 2)) / 3;
+      const g = (fc.getY(i) + fc.getY(i + 1) + fc.getY(i + 2)) / 3;
+      const b = (fc.getZ(i) + fc.getZ(i + 1) + fc.getZ(i + 2)) / 3;
+      for (let k = 0; k < 3; k++) fc.setXYZ(i + k, r, g, b);
+    }
+    // The pixel texture repeats every 8 m (UVs span the whole 500 m plane).
+    const grass = textures.grass();
+    grass.repeat.set(TERRAIN_SIZE / 8, TERRAIN_SIZE / 8);
+    const mesh = new THREE.Mesh(flat, toon(0xffffff, { vertexColors: true, map: grass }));
     mesh.name = 'terrain';
     return mesh;
   }
 
-  private static readonly SAND = new THREE.Color(0xe6d59a);
-  private static readonly WET_SAND = new THREE.Color(0xb8a770);
-  private static readonly GRASS_A = new THREE.Color(0x5fae3c);
-  private static readonly GRASS_B = new THREE.Color(0x78c04a);
-  private static readonly DESERT_A = new THREE.Color(0xd9b26a);
-  private static readonly DESERT_B = new THREE.Color(0xc99a52);
+  private static readonly SAND = new THREE.Color(0xf2dc8c);
+  private static readonly WET_SAND = new THREE.Color(0xc9b370);
+  private static readonly GRASS_A = new THREE.Color(0x4fc03a);
+  private static readonly GRASS_B = new THREE.Color(0x74d44a);
+  private static readonly DESERT_A = new THREE.Color(0xe8b85c);
+  private static readonly DESERT_B = new THREE.Color(0xd8a048);
 
   private colorAt(x: number, z: number, h: number, out: THREE.Color): void {
     const t = this.detail.noise(x * 0.15, z * 0.15);

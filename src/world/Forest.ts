@@ -12,6 +12,8 @@ import {
   TREE_REGROW_SECONDS,
   WORLD_SEED,
 } from '../config';
+import { faceted, toon } from '../render/materials';
+import { textures } from '../render/textures';
 import { ColliderGrid } from './Colliders';
 import { mulberry32 } from './noise';
 import type { Terrain } from './Terrain';
@@ -89,11 +91,12 @@ export class Forest {
       placed.push({ colliderId: collider.id, x, y, z, scale });
     }
 
-    const trunkGeo = new THREE.CylinderGeometry(0.25, 0.35, 3, 6).translate(0, 1.5, 0);
-    const lowerGeo = new THREE.ConeGeometry(1.7, 3, 7).translate(0, 4, 0);
-    const upperGeo = new THREE.ConeGeometry(1.2, 2.6, 7).translate(0, 5.6, 0);
-    const bark = new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 1, flatShading: true });
-    const leaves = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true });
+    // Chunky, slightly oversized pines (bigger than life reads better at low res).
+    const trunkGeo = faceted(new THREE.CylinderGeometry(0.3, 0.42, 3, 6).translate(0, 1.5, 0));
+    const lowerGeo = faceted(new THREE.ConeGeometry(2.0, 3.2, 7).translate(0, 3.5, 0));
+    const upperGeo = faceted(new THREE.ConeGeometry(1.45, 2.8, 7).translate(0, 5.3, 0));
+    const bark = toon(0xffffff, { map: textures.bark() });
+    const leaves = toon(0xffffff, { map: textures.leaves() });
 
     const n = placed.length;
     this.trunks = new THREE.InstancedMesh(trunkGeo, bark, n);
@@ -120,7 +123,7 @@ export class Forest {
       this.trees.push(tree);
       this.writeMatrix(tree, 1);
       // Bright, saturated greens: the daytime look should feel almost too perfect.
-      col.setHSL(0.27 + rand() * 0.05, 0.55, 0.38 + rand() * 0.1);
+      col.setHSL(0.29 + rand() * 0.06, 0.62, 0.36 + rand() * 0.1);
       this.lowerLeaves.setColorAt(index, col);
       this.upperLeaves.setColorAt(index, col);
     });
@@ -149,10 +152,10 @@ export class Forest {
     return best;
   }
 
-  /** Register one hit. Returns true if the tree was felled by this hit. */
-  hit(tree: Tree): boolean {
+  /** Register one hit of `power` damage. Returns true if the tree was felled by this hit. */
+  hit(tree: Tree, power = 1): boolean {
     if (tree.state !== 'alive') return false;
-    tree.hp--;
+    tree.hp -= power;
     tree.shake = SHAKE_TIME;
     if (tree.hp > 0) {
       this.animating.add(tree);

@@ -52,6 +52,11 @@ export const KEY_TURN_SPEED = 1.9;
 /** Radians of rotation per pixel at sensitivity 1.0. */
 export const MOUSE_RADIANS_PER_PIXEL = 0.0022;
 export const DEFAULT_SENSITIVITY = 1;
+/** Radians of rotation per scroll pixel for two-finger trackpad look, at sensitivity 1. */
+export const TRACKPAD_RADIANS_PER_PIXEL = 0.004;
+export const DEFAULT_TRACKPAD_SENSITIVITY = 1;
+/** Metres of camera zoom per pinch-gesture pixel (trackpad pinch = zoom). */
+export const PINCH_ZOOM_PER_PIXEL = 0.06;
 
 // ---- Camera (first <-> third person zoom) ---------------------------------
 /** Max camera distance behind the player. 0 = first person. */
@@ -81,7 +86,10 @@ export const CHOP_COOLDOWN = 0.55;
 export const FEED_COOLDOWN = 0.15;
 
 // ---- Trees & logs ---------------------------------------------------------
-export const TREE_HITS = 5; // clicks needed to fell a tree (bare hands for now)
+/** Tree hit points. Bare hands do PUNCH_CHOP_POWER per hit, tools their `chopPower`. */
+export const TREE_HITS = 5;
+/** Tree damage per hit without a tool. */
+export const PUNCH_CHOP_POWER = 1;
 export const LOGS_PER_TREE_MIN = 5;
 export const LOGS_PER_TREE_MAX = 10;
 /** Seconds after felling before a tree starts growing back. */
@@ -152,3 +160,9 @@ export const COOK_SECONDS = 8;
 export const COOK_CAPACITY = 10;
 /** A dropped item lands "in the fire" if the drop point is this close to its centre. */
 export const COOK_DROP_RADIUS = 1.8;
+
+// ---- Art style (retro low-poly + pixel art) -------------------------------
+/** The 3D scene is rendered at this vertical resolution, then scaled up with sharp pixels. */
+export const PIXEL_RENDER_HEIGHT = 270;
+/** Colour steps per channel after quantising (lower = fewer colours, more retro). */
+export const PALETTE_LEVELS = 9;

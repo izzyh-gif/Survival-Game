@@ -6,7 +6,7 @@
  * - wasPressed(code): went down since the last endFrame() (edge trigger)
  * - consumeMouseDelta(): accumulated mouse movement (only while pointer locked)
  * - consumeClick(): true once per left-click; isMouseDown: left button held
- * - consumeWheel(): accumulated wheel delta
+ * - consumeScroll(): two-finger trackpad scroll delta; consumePinch(): pinch delta
  */
 export class Input {
   private down = new Set<string>();
@@ -15,7 +15,9 @@ export class Input {
   private mouseDY = 0;
   private clicked = false;
   private mouseHeld = false;
-  private wheel = 0;
+  private wheelX = 0;
+  private wheelY = 0;
+  private pinch = 0;
 
   constructor(private readonly target: HTMLElement) {
     window.addEventListener('keydown', this.onKeyDown);
@@ -32,11 +34,21 @@ export class Input {
     return this.mouseHeld;
   }
 
-  /** Accumulated wheel movement since last call (positive = scroll down). */
-  consumeWheel(): number {
-    const w = this.wheel;
-    this.wheel = 0;
-    return w;
+  /**
+   * Two-finger trackpad scroll (or mouse wheel) since the last call, in pixels,
+   * with the browser's sign convention (deltaX/deltaY). Used for looking around.
+   */
+  consumeScroll(): { dx: number; dy: number } {
+    const d = { dx: this.wheelX, dy: this.wheelY };
+    this.wheelX = this.wheelY = 0;
+    return d;
+  }
+
+  /** Trackpad pinch (browsers report it as ctrl+wheel), in pixels. Negative = fingers spreading. */
+  consumePinch(): number {
+    const p = this.pinch;
+    this.pinch = 0;
+    return p;
   }
 
   isDown(code: string): boolean {
@@ -77,7 +89,7 @@ export class Input {
     this.mouseDX = this.mouseDY = 0;
     this.clicked = false;
     this.mouseHeld = false;
-    this.wheel = 0;
+    this.wheelX = this.wheelY = this.pinch = 0;
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -109,7 +121,14 @@ export class Input {
   };
 
   private onWheel = (e: WheelEvent): void => {
-    e.preventDefault();
-    if (document.pointerLockElement === this.target) this.wheel += e.deltaY;
+    e.preventDefault(); // never scroll or browser-zoom the page
+    if (document.pointerLockElement !== this.target) return;
+    // deltaMode: 0 = pixels (trackpads), 1 = lines, 2 = pages (some mice / Firefox).
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+    if (e.ctrlKey) this.pinch += e.deltaY * unit;
+    else {
+      this.wheelX += e.deltaX * unit;
+      this.wheelY += e.deltaY * unit;
+    }
   };
 }

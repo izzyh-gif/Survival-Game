@@ -15,9 +15,14 @@ export class Overlay {
 
   constructor(onResume: () => void) {
     this.slider.value = String(settings.sensitivity);
-    this.slider.addEventListener('input', () => {
-      settings.sensitivity = Number(this.slider.value);
-    });
+    this.slider.addEventListener('input', () => settings.set('sensitivity', Number(this.slider.value)));
+
+    const tp = document.getElementById('trackpad-sensitivity') as HTMLInputElement;
+    tp.value = String(settings.trackpadSensitivity);
+    tp.addEventListener('input', () => settings.set('trackpadSensitivity', Number(tp.value)));
+    const invert = document.getElementById('invert-trackpad') as HTMLInputElement;
+    invert.checked = settings.invertTrackpad;
+    invert.addEventListener('change', () => settings.set('invertTrackpad', invert.checked));
     this.root.addEventListener('click', (e) => {
       // Clicking the panel (e.g. the slider) must not resume; the button or backdrop does.
       if (e.target === this.root || e.target === this.button) onResume();

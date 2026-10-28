@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ITEMS, type ItemId } from '../inventory/Item';
+import { blobShadow } from '../render/materials';
 
 export interface Pile {
   id: ItemId;
@@ -24,6 +25,7 @@ export class DroppedItems {
 
   spawn(id: ItemId, count: number, x: number, z: number): Pile {
     const mesh = ITEMS[id].createMesh(count);
+    mesh.add(blobShadow(0.55));
     mesh.position.set(x, this.heightAt(x, z), z);
     mesh.rotation.y = Math.random() * Math.PI * 2;
     this.group.add(mesh);
@@ -56,6 +58,7 @@ export class DroppedItems {
     pile.count = count;
     const old = pile.mesh;
     pile.mesh = ITEMS[pile.id].createMesh(count);
+    pile.mesh.add(blobShadow(0.55));
     pile.mesh.position.copy(old.position);
     pile.mesh.rotation.copy(old.rotation);
     this.group.remove(old);

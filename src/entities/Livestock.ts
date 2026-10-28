@@ -177,7 +177,9 @@ export class Livestock {
     a.group.position.set(a.x, a.y, a.z);
     a.group.rotation.y = a.visualYaw;
     const swing = Math.sin(a.swingPhase) * a.swingAmp;
-    a.legs.forEach((leg, i) => (leg.rotation.x = i < 2 ? swing : -swing));
+    // Two legs alternate; four legs swing as diagonal pairs (0,1) vs (2,3).
+    const pairSplit = a.legs.length === 2 ? 1 : 2;
+    a.legs.forEach((leg, i) => (leg.rotation.x = i < pairSplit ? swing : -swing));
     // Squash when hit.
     const squash = a.hurt > 0 ? 1 - 0.2 * (a.hurt / HURT_TIME) : 1;
     a.group.scale.set(1 + (1 - squash) * 0.5, squash, 1 + (1 - squash) * 0.5);

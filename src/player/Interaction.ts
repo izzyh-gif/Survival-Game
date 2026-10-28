@@ -12,6 +12,7 @@ import {
   LOGS_PER_TREE_MIN,
   MIN_WALK_HEIGHT,
   PICKUP_DISTANCE,
+  PUNCH_CHOP_POWER,
   PUNCH_DAMAGE,
   REACH_DISTANCE,
 } from '../config';
@@ -44,7 +45,7 @@ const HOTBAR_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6',
 
 /**
  * Turns input into world actions:
- *  - 1-9,0 / mouse wheel: select inventory slot
+ *  - 1-9,0 or [ ]: select inventory slot
  *  - Click: eat the selected food item; else (hold to repeat) feed the campfire with a selected log, else attack the animal / chop the tree in front (whichever is closer)
  *  - E: pick up the nearest dropped pile
  *  - Q: drop one of the selected item (Shift+Q drops the whole stack)
@@ -65,13 +66,14 @@ export class Interaction {
 
   update(dt: number, input: Input): void {
     this.cooldown = Math.max(0, this.cooldown - dt);
+    this.player.setHeldItem(this.inventory.selectedStack?.id ?? null);
 
     // Hotbar selection
     HOTBAR_KEYS.forEach((code, i) => {
       if (input.wasPressed(code)) this.inventory.select(i);
     });
-    const wheel = input.consumeWheel();
-    if (wheel !== 0) this.inventory.cycle(wheel > 0 ? 1 : -1);
+    if (input.wasPressed('BracketRight')) this.inventory.cycle(1);
+    if (input.wasPressed('BracketLeft')) this.inventory.cycle(-1);
 
     if (input.wasPressed('KeyE')) this.pickUp();
     if (input.wasPressed('KeyQ')) this.drop(input.anyDown('ShiftLeft', 'ShiftRight'));
@@ -155,7 +157,11 @@ export class Interaction {
     }
     if (food) return this.wouldHelp(food) ? (food.hunger > 0 ? 'Click: eat' : 'Click: use') : null;
     if (target?.kind === 'campfire') return 'Hold click: add log to campfire';
-    if (target?.kind === 'tree') return 'Hold click: chop tree';
+    if (target?.kind === 'tree') {
+      const stack = this.inventory.selectedStack;
+      const hasAxe = !!stack && !!ITEMS[stack.id].chopPower;
+      return hasAxe ? 'Hold click: chop tree' : 'Hold click: chop tree (an axe is faster)';
+    }
     if (target?.kind === 'animal') return `Hold click: attack ${ANIMALS[target.animal.kind].name}`;
     return null;
   }
@@ -174,6 +180,7 @@ export class Interaction {
 
   private attack(animal: Animal): void {
     this.cooldown = ATTACK_COOLDOWN;
+    this.player.swing();
     const stack = this.inventory.selectedStack;
     const damage = (stack && ITEMS[stack.id].damage) || PUNCH_DAMAGE;
     const { x, z } = this.player.position;
@@ -198,7 +205,10 @@ export class Interaction {
 
   private chop(tree: Tree): void {
     this.cooldown = CHOP_COOLDOWN;
-    if (!this.world.forest.hit(tree)) return;
+    this.player.swing();
+    const stack = this.inventory.selectedStack;
+    const power = (stack && ITEMS[stack.id].chopPower) || PUNCH_CHOP_POWER;
+    if (!this.world.forest.hit(tree, power)) return;
     const n = LOGS_PER_TREE_MIN + Math.floor(Math.random() * (LOGS_PER_TREE_MAX - LOGS_PER_TREE_MIN + 1));
     // Land the logs in a small pile at the stump, nudged toward the player.
     const px = this.player.position.x;

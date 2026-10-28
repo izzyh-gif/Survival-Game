@@ -6,6 +6,7 @@ import { Player } from '../player/Player';
 import { PlayerStats, type DamageSource } from '../player/Stats';
 import { GameOver } from '../ui/GameOver';
 import { Hud } from '../ui/Hud';
+import { PixelRenderer } from '../render/PixelRenderer';
 import { Overlay } from '../ui/Overlay';
 import { World } from '../world/World';
 import { history } from './History';
@@ -31,7 +32,7 @@ type State = 'menu' | 'playing' | 'paused' | 'gameover' | 'home';
  * Systems update in a fixed order each frame (see `tick()`), only while playing.
  */
 export class Game {
-  private readonly renderer: THREE.WebGLRenderer;
+  private readonly renderer: PixelRenderer;
   private readonly input: Input;
   private readonly overlay: Overlay;
   private readonly gameOver: GameOver;
@@ -47,10 +48,7 @@ export class Game {
   private interaction!: Interaction;
 
   constructor(container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    container.appendChild(this.renderer.domElement);
+    this.renderer = new PixelRenderer(container);
     this.input = new Input(this.renderer.domElement);
 
     this.overlay = new Overlay(() => this.onOverlayClick());
@@ -65,13 +63,13 @@ export class Game {
       if (document.pointerLockElement !== this.renderer.domElement && this.state === 'playing') this.pause();
     });
     window.addEventListener('resize', () => {
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.resize();
       this.player.resize(window.innerWidth / window.innerHeight);
     });
   }
 
   start(): void {
-    this.renderer.setAnimationLoop(() => this.tick());
+    this.renderer.renderer.setAnimationLoop(() => this.tick());
   }
 
   // ---- run lifecycle ----
@@ -88,7 +86,9 @@ export class Game {
       window.innerWidth / window.innerHeight,
       new THREE.Vector3(0, CAMPFIRE_GROUND_HEIGHT, 5),
     );
-    this.world.scene.add(this.player.body);
+    this.world.scene.add(this.player.body, this.player.camera); // camera is in the scene so its held-item view model renders
+    this.inventory.add('wooden_axe', 1); // starting gear
+    this.inventory.select(0);
     this.hud.bind(this.inventory);
     this.interaction = new Interaction(this.player, this.world, this.inventory, this.hud, this.stats);
 
@@ -148,6 +148,7 @@ export class Game {
     };
     const newBest = history.record(run);
     this.hud.setPrompt(null);
+    this.updateHudInfo(); // final health/hunger values behind the game-over box
     this.gameOver.show(run, history.bestStreak, newBest);
   }
 
@@ -196,6 +197,7 @@ export class Game {
       this.interaction.update(dt, this.input);
       this.world.update(dt, this.player.position);
       this.updateHudInfo();
+      this.hud.setCrosshair(this.player.isFirstPerson);
     }
     this.input.endFrame();
     this.renderer.render(this.world.scene, this.player.camera);

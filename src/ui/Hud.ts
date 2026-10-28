@@ -1,4 +1,5 @@
 import { ITEMS } from '../inventory/Item';
+import { itemIconUrl } from './icons';
 import type { Inventory } from '../inventory/Inventory';
 import type { PlayerStats } from '../player/Stats';
 
@@ -16,6 +17,7 @@ export class Hud {
   private readonly healthLabel = document.getElementById('health-label') as HTMLElement;
   private readonly hungerFill = document.getElementById('hunger-fill') as HTMLElement;
   private readonly hungerLabel = document.getElementById('hunger-label') as HTMLElement;
+  private readonly crosshair = document.getElementById('crosshair') as HTMLElement;
   private toastTimer = 0;
 
   private inventory: Inventory | null = null;
@@ -46,6 +48,11 @@ export class Hud {
     if (this.hungerLabel.textContent !== ul) this.hungerLabel.textContent = ul;
   }
 
+  /** The centre dot is only accurate in first person, so Game hides it when zoomed out. */
+  setCrosshair(visible: boolean): void {
+    this.crosshair.classList.toggle('hidden', !visible);
+  }
+
   setPrompt(text: string | null): void {
     const value = text ?? '';
     if (this.promptEl.textContent !== value) this.promptEl.textContent = value;
@@ -74,16 +81,16 @@ export class Hud {
 
       if (stack) {
         const def = ITEMS[stack.id];
-        const icon = document.createElement('div');
+        const icon = document.createElement('img');
         icon.className = 'icon';
-        icon.style.background = def.color;
-        const name = document.createElement('span');
-        name.className = 'name';
-        name.textContent = def.name;
+        icon.src = itemIconUrl(stack.id);
+        icon.alt = def.name;
+        icon.title = def.name;
         const count = document.createElement('span');
         count.className = 'count';
         count.textContent = String(stack.count);
-        slot.append(icon, name, count);
+        slot.append(icon);
+        if (stack.count > 1) slot.append(count);
       }
       this.hotbar.appendChild(slot);
     });

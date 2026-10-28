@@ -35,6 +35,17 @@ export class DayNight {
     return Math.sin(((this.hour - 6) / 24) * Math.PI * 2);
   }
 
+  /** 0 at night, 1 in full daylight (smooth). Used to tint clouds, sun and moon. */
+  get daylight(): number {
+    return smoothstep(-0.05, 0.35, this.sunElevation);
+  }
+
+  /** Unit-ish direction from the player toward the sun. */
+  get sunDirection(): THREE.Vector3 {
+    const a = ((this.hour - 6) / 24) * Math.PI * 2;
+    return new THREE.Vector3(Math.cos(a), Math.sin(a), 0.3).normalize();
+  }
+
   get isNight(): boolean {
     return this.sunElevation < 0.05;
   }

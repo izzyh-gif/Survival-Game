@@ -6,8 +6,10 @@ import {
   KEY_TURN_SPEED,
   MAX_ZOOM_DISTANCE,
   MOUSE_RADIANS_PER_PIXEL,
+  PINCH_ZOOM_PER_PIXEL,
   PLAYER_RADIUS,
   SPRINT_MULTIPLIER,
+  TRACKPAD_RADIANS_PER_PIXEL,
   STARVING_SPEED_MULTIPLIER,
   WALK_SPEED,
   WATER_LEVEL,
@@ -16,11 +18,16 @@ import {
   ZOOM_TAP_STEP,
 } from '../config';
 import type { Input } from '../core/Input';
+import { ITEMS, type ItemId } from '../inventory/Item';
 import { settings } from '../core/Settings';
+import { blobShadow, toon } from '../render/materials';
+import { textures } from '../render/textures';
 import { clamp } from '../world/noise';
 import type { World } from '../world/World';
 
 const MAX_PITCH = Math.PI / 2 - 0.05;
+/** Seconds one tool swing takes. */
+const SWING_TIME = 0.3;
 const ZOOM_IN_KEYS = ['NumpadAdd', 'Equal'];
 const ZOOM_OUT_KEYS = ['NumpadSubtract', 'Minus'];
 
@@ -56,14 +63,23 @@ export class Player {
   private distance = 0;
   private bobTime = 0;
   private swingAmp = 0;
+  /** Progress of the tool-swing animation (0 = idle, counts up to SWING_TIME). */
+  private toolSwing = 0;
+  private heldId: ItemId | null = null;
+  private handMesh: THREE.Object3D | null = null;
+  private viewMesh: THREE.Object3D | null = null;
+  /** First-person view model, parented to the camera. */
+  private readonly viewModel = new THREE.Group();
   private readonly legs: THREE.Object3D[] = [];
   private readonly arms: THREE.Object3D[] = [];
 
   constructor(aspect: number, spawn: THREE.Vector3) {
-    this.camera = new THREE.PerspectiveCamera(70, aspect, 0.1, 400);
+    this.camera = new THREE.PerspectiveCamera(70, aspect, 0.1, 700);
     this.camera.rotation.order = 'YXZ';
     this.position.copy(spawn);
     this.body = this.buildBody();
+    this.camera.add(this.viewModel);
+    this.viewModel.position.set(0.3, -0.34, -0.6);
     this.syncCamera(0);
   }
 
@@ -72,12 +88,47 @@ export class Player {
     return { x: -Math.sin(this.yaw), z: -Math.cos(this.yaw) };
   }
 
+  /** Show this item in the player's hand (null = empty hands). Call every frame; cheap if unchanged. */
+  setHeldItem(id: ItemId | null): void {
+    if (id === this.heldId) return;
+    this.heldId = id;
+    if (this.handMesh) this.arms[1].remove(this.handMesh);
+    if (this.viewMesh) this.viewModel.remove(this.viewMesh);
+    this.handMesh = this.viewMesh = null;
+    const def = id ? ITEMS[id] : null;
+    if (!def?.createHeldMesh) return;
+    this.handMesh = def.createHeldMesh();
+    this.handMesh.position.set(0, -0.58, 0);
+    this.handMesh.rotation.x = -1.0;
+    this.arms[1].add(this.handMesh);
+    this.viewMesh = def.createHeldMesh();
+    this.viewMesh.scale.setScalar(0.55);
+    this.viewModel.add(this.viewMesh);
+  }
+
+  /** Play the swing animation (chop / attack). */
+  swing(): void {
+    if (this.toolSwing <= 0) this.toolSwing = SWING_TIME;
+  }
+
+  /** True when the camera is at the player's eyes (zoomed fully in). */
+  get isFirstPerson(): boolean {
+    return this.distance < FIRST_PERSON_THRESHOLD;
+  }
+
   update(dt: number, input: Input, world: World): void {
     // --- Looking ---
     const { dx, dy } = input.consumeMouseDelta();
     const sens = settings.sensitivity * MOUSE_RADIANS_PER_PIXEL;
     this.yaw -= dx * sens;
     this.pitch = clamp(this.pitch - dy * sens, -MAX_PITCH, MAX_PITCH);
+
+    // Two-finger trackpad swipe looks in any direction. Default follows the
+    // OS "natural scrolling" convention: fingers up = look up, right = turn right.
+    const scroll = input.consumeScroll();
+    const tp = settings.trackpadSensitivity * TRACKPAD_RADIANS_PER_PIXEL * (settings.invertTrackpad ? -1 : 1);
+    this.yaw += scroll.dx * tp;
+    this.pitch = clamp(this.pitch + scroll.dy * tp, -MAX_PITCH, MAX_PITCH);
     if (input.anyDown('KeyA', 'ArrowLeft')) this.yaw += KEY_TURN_SPEED * dt;
     if (input.anyDown('KeyD', 'ArrowRight')) this.yaw -= KEY_TURN_SPEED * dt;
 
@@ -121,6 +172,8 @@ export class Player {
     const heldOut = input.anyDown(...ZOOM_OUT_KEYS) && !outPressed;
     const heldIn = input.anyDown(...ZOOM_IN_KEYS) && !inPressed;
     this.targetDistance += ((heldOut ? 1 : 0) - (heldIn ? 1 : 0)) * ZOOM_HOLD_SPEED * dt;
+    // Trackpad pinch: spreading fingers (negative delta) zooms in.
+    this.targetDistance += input.consumePinch() * PINCH_ZOOM_PER_PIXEL;
     this.targetDistance = clamp(this.targetDistance, 0, MAX_ZOOM_DISTANCE);
   }
 
@@ -176,6 +229,7 @@ export class Player {
       }
     }
     this.camera.rotation.set(this.pitch, this.yaw, 0);
+    this.viewModel.visible = firstPerson;
   }
 
   private updateBody(dt: number, firstPerson: boolean): void {
@@ -189,36 +243,49 @@ export class Player {
     this.legs[1].rotation.x = -swing;
     this.arms[0].rotation.x = -swing;
     this.arms[1].rotation.x = swing;
+
+    // Tool swing: overrides the right arm while active. Shared by both views.
+    let swingPose = 0;
+    if (this.toolSwing > 0) {
+      this.toolSwing = Math.max(0, this.toolSwing - dt);
+      swingPose = Math.sin((1 - this.toolSwing / SWING_TIME) * Math.PI);
+      this.arms[1].rotation.x = -swingPose * 1.9;
+    }
+    this.viewModel.rotation.set(-0.5 - swingPose * 1.1, 0.7, -0.15);
   }
 
   /** Simple low-poly character. Faces -Z at yaw 0 (same as the camera). */
   private buildBody(): THREE.Group {
     const g = new THREE.Group();
     g.name = 'player-body';
-    const mat = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.9, flatShading: true });
-    const skin = mat(0xf1c27d);
-    const shirt = mat(0x3b6ea5);
-    const pants = mat(0x4b4b4b);
+    const skin = toon(0xf1c27d);
+    const shirt = toon(0x3b8bd9);
+    const pants = toon(0x4a4f7a);
+    const boots = toon(0x5a3418);
+    const hair = toon(0x5a3a1e);
+    const box = (w: number, h: number, d: number, m: THREE.Material | THREE.Material[], x = 0, y = 0, z = 0) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+      mesh.position.set(x, y, z);
+      return mesh;
+    };
 
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.28), shirt);
-    torso.position.y = 1.1;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), skin);
-    head.position.y = 1.62;
-    const nose = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.06), skin);
-    nose.position.set(0, 1.6, -0.18);
-    g.add(torso, head, nose);
+    g.add(box(0.58, 0.72, 0.34, shirt, 0, 1.1, 0));
+    // Blocky head: face texture on the front (-Z) face, hair on top, skin elsewhere.
+    const face = toon(0xffffff, { map: textures.face() });
+    g.add(box(0.42, 0.42, 0.42, [skin, skin, hair, skin, skin, face], 0, 1.64, 0));
+    g.add(box(0.46, 0.1, 0.46, hair, 0, 1.87, 0.01));
 
-    const limb = (w: number, h: number, d: number, m: THREE.Material, x: number, pivotY: number) => {
+    // Limbs swing from pivots at the hip/shoulder.
+    const limb = (w: number, h: number, d: number, m: THREE.Material, tip: THREE.Material, x: number, pivotY: number) => {
       const pivot = new THREE.Group();
       pivot.position.set(x, pivotY, 0);
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-      mesh.position.y = -h / 2;
-      pivot.add(mesh);
+      pivot.add(box(w, h, d, m, 0, -h / 2, 0), box(w + 0.01, 0.16, d + 0.01, tip, 0, -h + 0.08, 0));
       g.add(pivot);
       return pivot;
     };
-    this.legs.push(limb(0.2, 0.75, 0.22, pants, -0.13, 0.75), limb(0.2, 0.75, 0.22, pants, 0.13, 0.75));
-    this.arms.push(limb(0.14, 0.6, 0.14, shirt, -0.34, 1.42), limb(0.14, 0.6, 0.14, shirt, 0.34, 1.42));
+    this.legs.push(limb(0.24, 0.75, 0.26, pants, boots, -0.15, 0.75), limb(0.24, 0.75, 0.26, pants, boots, 0.15, 0.75));
+    this.arms.push(limb(0.17, 0.62, 0.17, shirt, skin, -0.38, 1.42), limb(0.17, 0.62, 0.17, shirt, skin, 0.38, 1.42));
+    g.add(blobShadow(0.5));
     return g;
   }
 
