@@ -57,6 +57,13 @@ export class World {
     this.drops = new DroppedItems((x, z) => this.terrain.heightAt(x, z));
     this.scene.add(this.drops.group);
 
+    // Cooked meat appears on the ground beside the fire, ready to pick up with E.
+    this.campfire.onCooked = (count) => {
+      const a = Math.random() * Math.PI * 2;
+      const p = this.campfire.group.position;
+      this.drops.spawn('cooked_meat', count, p.x + Math.cos(a) * 1.7, p.z + Math.sin(a) * 1.7);
+    };
+
     this.livestock = new Livestock(this);
     this.scene.add(this.livestock.group);
   }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /** Add new item ids here, then give them an entry in ITEMS below. */
-export type ItemId = 'log' | 'raw_meat' | 'leather' | 'wool' | 'feather';
+export type ItemId = 'log' | 'raw_meat' | 'cooked_meat' | 'leather' | 'wool' | 'feather';
 
 export interface ItemDef {
   id: ItemId;
@@ -47,6 +47,7 @@ function cluster(geo: THREE.BufferGeometry, mat: THREE.Material, count: number, 
 
 const MEAT_GEO = new THREE.BoxGeometry(0.22, 0.12, 0.16);
 const MEAT_MAT = new THREE.MeshStandardMaterial({ color: 0xc9475a, roughness: 0.8, flatShading: true });
+const COOKED_MAT = new THREE.MeshStandardMaterial({ color: 0x7a4326, roughness: 0.9, flatShading: true });
 const LEATHER_GEO = new THREE.BoxGeometry(0.34, 0.03, 0.26);
 const LEATHER_MAT = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 1, flatShading: true });
 const WOOL_GEO = new THREE.IcosahedronGeometry(0.15, 0);
@@ -60,8 +61,17 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     name: 'Raw Meat',
     maxStack: 20,
     color: '#c9475a',
-    hunger: 8, // cooking it will restore much more (roadmap)
+    hunger: 8, // cook it in the campfire for much more
     createMesh: (count) => cluster(MEAT_GEO, MEAT_MAT, count, 0.07),
+  },
+  cooked_meat: {
+    id: 'cooked_meat',
+    name: 'Cooked Meat',
+    maxStack: 20,
+    color: '#7a4326',
+    hunger: 35,
+    heal: 5,
+    createMesh: (count) => cluster(MEAT_GEO, COOKED_MAT, count, 0.07),
   },
   leather: {
     id: 'leather',

@@ -17,7 +17,7 @@ src/
     Forest.ts        instanced trees, chop (hit), regrowth timers; findTarget()
     DroppedItems.ts  item piles on the ground (Q drops, felled trees)
     Colliders.ts     spatial-hash of circle colliders (trees, campfire)
-    Campfire.ts      campfire visuals, log feeding, levelling
+    Campfire.ts      campfire visuals, log feeding, levelling, fuel, cooking
     DayNight.ts      in-game clock, sun/sky/fog; day counter
     noise.ts         seeded PRNG, value noise, math helpers
   entities/
@@ -62,6 +62,7 @@ src/
 - **Run lifecycle.** `Game` has states menu / playing / paused / gameover / home. A run = World + Player + Inventory + PlayerStats + Interaction, all rebuilt by `Game.newRun()` (the old scene is disposed). Add any new per-run system there.
 - **Streak.** `DayNight.nightsSurvived` increments at each dawn (6:00); that is the streak. On death the run is recorded to `History` immediately (so it is never lost), then the game-over screen offers Restart (new run now) or Save progress (back to the home screen; "New game" starts a fresh run). Nothing about an in-progress run is persisted across page reloads.
 - **Livestock.** `LIVESTOCK_COUNTS` cows/sheep/chickens spawn in the forest (seeded). States: idle -> wander -> idle; a hit makes them flee from the player for `ANIMAL_FLEE_SECONDS`. Bare hands do `PUNCH_DAMAGE` (1); an item's `damage` overrides it (hook for weapons). HP: chicken 2, sheep 4, cow 6. Kills spawn drop piles (tables in `animals.ts`: meat + leather/wool/feathers) and queue a respawn after 90 s at least 35 m from the player. Animals avoid trees via the shared collider grid and stay on `World.isLand()`. Click prefers an animal over a tree when both are in reach.
+- **Cooking.** Q-dropping raw meat while the drop point is within `COOK_DROP_RADIUS` (1.8 m) of the fire calls `Campfire.cook(n)` instead of dropping it. Up to `COOK_CAPACITY` (10) pieces cook at once for `COOK_SECONDS` (8); timers pause if the fire goes out, and a fire that is out refuses meat (it falls on the ground). When a batch finishes, `Campfire.onCooked` makes `World` spawn a `cooked_meat` pile beside the fire. Raw meat: 8 hunger. Cooked: 35 hunger + 5 health.
 - **No jumping / no gravity.** The player is snapped to terrain height (smoothed).
 - **Map unlocking.** `World.unlockedRadius` grows with `campfireLevel` (`BASE_UNLOCK_RADIUS + UNLOCK_RADIUS_PER_LEVEL * (level-1)`). The desert (north, z < ~-70) is blocked until level `DESERT_UNLOCK_LEVEL` (50). The block is currently an invisible wall; a visual cue is on the roadmap.
 - **Day/night.** 10 real minutes per 24h (`DAY_LENGTH_SECONDS`). `DayNight.day` increments at midnight; `isNight` is the hook for monster spawns. The player currently starts at 8am on day 1. Day is bright and saturated on purpose (the "too perfect" feel); the horror layer should be added on top (silence, subtle wrongness).

@@ -18,17 +18,17 @@ Order follows SPEC "Priorities": basic functions first (materials, crafting, wea
 - [x] Campfire fuel burn-down, 10 s out-timer, safe zone flag (`World.isSafe`)
 - [x] Health and hunger bars; sprint drains hunger; starvation drains health and slows; no natural regen; consumables heal/feed
 - [x] Livestock (cow, sheep, chicken): wander, flee, melee, drops, respawn; raw meat/leather/wool/feather items
+- [x] Cooking: drop raw meat in the lit fire -> cooked meat
 - [x] Game-over screen (streak + best streak), Restart / Save progress, persisted run history, full run reset
 
 ## Next (core loop)
 
 1. Axe/tools (chopping currently bare-handed) via crafting
-2. Campfire: cooking meat (drop raw meat in the fire; raw meat is currently edible for only 8 hunger). Fuel, levelling and safe zone are done
-3. Crafting table + recipes (spear -> gun), metal ore mining
-4. Monsters, night attacks every other night, difficulty +1 every 3 days, blood moon boss every 10 days
-5. Win condition at night 50 (plane pickup), dedicated game history screen (the home/pause overlay already lists the last 8 runs)
-6. Tutorial (first-run), full home screen
-7. Merchant (every other day), random loot chests, wolf taming
+2. Crafting table + recipes (spear -> gun), metal ore mining
+3. Monsters, night attacks every other night, difficulty +1 every 3 days, blood moon boss every 10 days
+4. Win condition at night 50 (plane pickup), dedicated game history screen (the home/pause overlay already lists the last 8 runs)
+5. Tutorial (first-run), full home screen
+6. Merchant (every other day), random loot chests, wolf taming
 
 ## Later
 
@@ -37,6 +37,7 @@ Sound/ambience, three bosses, rare drops, desert biome + snake king, shadows, gr
 ## Open questions for the product owner
 
 - Log requirement is capped at 500/level but total logs to reach level 50 are still ~14,000. Is that intended as a long-term goal, or should the curve/desert unlock change?
+- Cooking tuning (8 s, 10 pieces at once, cooked = 35 hunger/+5 health vs raw 8) is my guess. Should raw meat have a downside?
 - Fuel tuning (90 s per log, 10 min max) and the 20 m safe radius are my guesses.
 - Livestock numbers/HP/drop amounts and the 90 s respawn are my guesses; bare-hand killing a cow takes 6 hits.
 - Art direction: low-poly procedural (current) vs imported models?

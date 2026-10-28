@@ -144,3 +144,11 @@ export const LIVESTOCK_RESPAWN_SECONDS = 90;
 export const LIVESTOCK_RESPAWN_MIN_DISTANCE = 35;
 /** Seconds an animal runs away after being hit. */
 export const ANIMAL_FLEE_SECONDS = 4;
+
+// ---- Cooking (SPEC: drop raw meat in the fire to cook it) -----------------
+/** Seconds a batch of raw meat takes to cook. The fire must stay lit. */
+export const COOK_SECONDS = 8;
+/** Max pieces of meat that can cook at the same time. */
+export const COOK_CAPACITY = 10;
+/** A dropped item lands "in the fire" if the drop point is this close to its centre. */
+export const COOK_DROP_RADIUS = 1.8;

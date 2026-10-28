@@ -5,8 +5,11 @@ import {
   CAMPFIRE_MAX_FUEL_SECONDS,
   CAMPFIRE_OUT_GRACE_SECONDS,
   CAMPFIRE_START_FUEL_SECONDS,
+  COOK_CAPACITY,
+  COOK_SECONDS,
   logsRequiredForLevel,
 } from '../config';
+import { ITEMS } from '../inventory/Item';
 
 /**
  * Campfire: stone ring, logs, flame and a flickering light.
@@ -18,8 +21,12 @@ import {
  *    goes out; after CAMPFIRE_OUT_GRACE_SECONDS the safe zone is lost until the
  *    fire is relit by adding any log. (SPEC rule 1.)
  *
- * Not implemented yet (see docs/ROADMAP.md): cooking meat, enemies reacting
- * to the safe zone (use `World.isSafe()`).
+ * Cooking: raw meat dropped into a lit fire (`cook()`) takes COOK_SECONDS and
+ * then `onCooked(count)` fires so the world can drop the cooked meat. The
+ * timer only runs while the fire is lit.
+ *
+ * Not implemented yet (see docs/ROADMAP.md): enemies reacting to the safe zone
+ * (use `World.isSafe()`).
  */
 export class Campfire {
   readonly group = new THREE.Group();
@@ -44,8 +51,12 @@ export class Campfire {
   onSafeZoneLost?: () => void;
   /** Fuel dropped below the warning threshold (fires once per refuel). */
   onLowFuel?: () => void;
+  /** Called when a batch finishes cooking, with the number of pieces. */
+  onCooked?: (count: number) => void;
   private lowFuelWarned = false;
+  private readonly cooking: { count: number; timer: number; mesh: THREE.Object3D }[] = [];
 
+  private readonly cookGroup = new THREE.Group();
   private readonly flame: THREE.Mesh;
   private readonly light: THREE.PointLight;
   private time = 0;
@@ -79,9 +90,44 @@ export class Campfire {
     this.flame.position.y = 0.7;
     this.group.add(this.flame);
 
+    this.group.add(this.cookGroup);
+
     this.light = new THREE.PointLight(0xff9a40, 25, 28, 1.6);
     this.light.position.y = 1.2;
     this.group.add(this.light);
+  }
+
+  /** Pieces of meat currently cooking. */
+  get cookingCount(): number {
+    return this.cooking.reduce((n, c) => n + c.count, 0);
+  }
+
+  /**
+   * Put raw meat in the fire. Returns how many pieces were accepted (0 if the
+   * fire is out or full); the caller keeps the rest.
+   */
+  cook(count: number): number {
+    if (!this.lit) return 0;
+    const accepted = Math.max(0, Math.min(count, COOK_CAPACITY - this.cookingCount));
+    if (accepted === 0) return 0;
+    const mesh = ITEMS.raw_meat.createMesh(accepted);
+    const a = Math.random() * Math.PI * 2;
+    mesh.position.set(Math.cos(a) * 0.3, 0.3, Math.sin(a) * 0.3);
+    this.cookGroup.add(mesh);
+    this.cooking.push({ count: accepted, timer: COOK_SECONDS, mesh });
+    return accepted;
+  }
+
+  private cookTick(dt: number): void {
+    if (!this.lit) return;
+    for (let i = this.cooking.length - 1; i >= 0; i--) {
+      const c = this.cooking[i];
+      c.timer -= dt;
+      if (c.timer > 0) continue;
+      this.cookGroup.remove(c.mesh);
+      this.cooking.splice(i, 1);
+      this.onCooked?.(c.count);
+    }
   }
 
   /** Logs needed to finish the current level. */
@@ -114,6 +160,7 @@ export class Campfire {
   update(dt: number): void {
     this.time += dt;
     this.burn(dt);
+    this.cookTick(dt);
     this.flame.visible = this.lit;
     if (!this.lit) {
       this.light.intensity = 0;

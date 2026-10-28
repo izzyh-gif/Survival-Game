@@ -1,5 +1,6 @@
 import {
   AIM_MIN_DOT,
+  COOK_DROP_RADIUS,
   ANIMAL_AIM_MIN_DOT,
   ANIMAL_REACH,
   ATTACK_COOLDOWN,
@@ -110,6 +111,26 @@ export class Interaction {
     return tree ? { kind: 'tree', tree } : null;
   }
 
+  private stack() {
+    return this.inventory.selectedStack;
+  }
+
+  /** Where Q would drop an item (clamped to the player's feet over water). */
+  private dropPoint(): { x: number; z: number } {
+    const f = this.player.facing;
+    const { x: px, z: pz } = this.player.position;
+    const x = px + f.x * DROP_DISTANCE;
+    const z = pz + f.z * DROP_DISTANCE;
+    // Never drop into the water: fall back to the player's feet.
+    return this.world.groundHeight(x, z) < MIN_WALK_HEIGHT ? { x: px, z: pz } : { x, z };
+  }
+
+  private dropPointNearFire(): boolean {
+    const p = this.dropPoint();
+    const fire = this.world.campfire.group.position;
+    return Math.hypot(p.x - fire.x, p.z - fire.z) <= COOK_DROP_RADIUS;
+  }
+
   private nearestPile(): Pile | null {
     return this.world.drops.nearest(this.player.position.x, this.player.position.z, PICKUP_DISTANCE);
   }
@@ -129,6 +150,9 @@ export class Interaction {
   private promptFor(target: ClickTarget, food: Consumable | null): string | null {
     const pile = this.nearestPile();
     if (pile) return `E: pick up ${pile.count} ${ITEMS[pile.id].name}${pile.count > 1 ? 's' : ''}`;
+    if (this.stack()?.id === 'raw_meat' && this.dropPointNearFire()) {
+      return this.world.campfire.lit ? 'Q: drop in fire to cook  |  Click: eat raw' : 'The fire is out: relight it to cook';
+    }
     if (food) return this.wouldHelp(food) ? (food.hunger > 0 ? 'Click: eat' : 'Click: use') : null;
     if (target?.kind === 'campfire') return 'Hold click: add log to campfire';
     if (target?.kind === 'tree') return 'Hold click: chop tree';
@@ -201,15 +225,22 @@ export class Interaction {
   private drop(wholeStack: boolean): void {
     const stack = this.inventory.selectedStack;
     if (!stack) return;
-    const f = this.player.facing;
-    let x = this.player.position.x + f.x * DROP_DISTANCE;
-    let z = this.player.position.z + f.z * DROP_DISTANCE;
-    // Never drop into the water: fall back to the player's feet.
-    if (this.world.groundHeight(x, z) < MIN_WALK_HEIGHT) {
-      x = this.player.position.x;
-      z = this.player.position.z;
-    }
+    const { x, z } = this.dropPoint();
     const removed = this.inventory.removeFromSlot(this.inventory.selected, wholeStack ? stack.count : 1);
-    if (removed) this.world.drops.spawn(removed.id, removed.count, x, z);
+    if (!removed) return;
+
+    let count = removed.count;
+    // Raw meat dropped into a lit fire cooks instead of landing on the ground.
+    if (removed.id === 'raw_meat' && this.dropPointNearFire()) {
+      const fire = this.world.campfire;
+      const accepted = fire.cook(count);
+      if (accepted > 0) {
+        count -= accepted;
+        this.hud.toast(`Cooking ${accepted} meat... it will appear beside the fire`);
+      } else {
+        this.hud.toast(fire.lit ? 'The fire is full of meat already' : 'The fire is out: relight it to cook');
+      }
+    }
+    if (count > 0) this.world.drops.spawn(removed.id, count, x, z);
   }
 }
